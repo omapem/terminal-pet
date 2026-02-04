@@ -94,10 +94,16 @@ pub enum Event {
     BugFix,
 }
 
+// Expose hooks module
+pub mod hooks;
+pub mod storage;
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use std::fs;
+    use std::path::PathBuf;
+    use crate::storage;
     #[test]
     fn commit_increases_xp_and_sets_happy() {
         let mut pet = PetState::new();
@@ -138,4 +144,17 @@ mod tests {
         assert!(pet.energy < 25);
         assert_eq!(pet.mood, Mood::Sad);
     }
+
+    #[test]
+    fn storage_save_and_load_roundtrip() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("pet.json");
+        let persisted = storage::PersistedPet { mood: Mood::Happy, energy: 42, xp: 123, level: 2 };
+        storage::save(Some(&path), &persisted).unwrap();
+        let loaded = storage::load(Some(&path)).unwrap();
+        assert_eq!(loaded.energy, 42);
+        assert_eq!(loaded.xp, 123);
+        assert_eq!(loaded.level, 2);
+    }
 }
+
