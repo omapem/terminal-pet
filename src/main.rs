@@ -18,7 +18,11 @@ enum Commands {
     /// Show pet status
     Status,
     /// Run pet continuously, reading persisted state and rendering
-    Pet,
+    Pet {
+        /// Poll interval in seconds
+        #[arg(long, default_value_t = 5)]
+        poll_interval: u64,
+    },
     /// Simulate event (for development/testing)
     Event { name: String },
     /// Install git hook (post-commit) in the current repo
@@ -38,9 +42,18 @@ fn main() {
             renderer::render_pet_once(pet.mood);
         }
 
-        Some(Commands::Pet) => {
+        Some(Commands::Pet { poll_interval }) => {
             println!("Starting pet mode (press Ctrl+C to quit). Reading state and rendering...");
-            renderer::run_loop(1000);
+            // set up signal handler and shared running flag
+            let running = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+            let r = running.clone();
+            let poll_ms = poll_interval.saturating_mul(1000);
+            let _ = ctrlc::set_handler(move || {
+                // clear the running flag to stop the loop
+                r.store(false, std::sync::atomic::Ordering::SeqCst);
+            });
+
+            renderer::run_loop(poll_ms, running);
         }
 
         Some(Commands::HookInstall) => {

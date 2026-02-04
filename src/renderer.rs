@@ -1,4 +1,4 @@
-use std::{thread, time::Duration};
+use std::{thread, time::Duration, sync::{Arc, atomic::{AtomicBool, Ordering}}};
 use crate::{Mood};
 
 pub fn render_pet_once(mood: Mood) {
@@ -23,8 +23,9 @@ pub fn render_pet_once(mood: Mood) {
     }
 }
 
-pub fn run_loop(poll_interval_ms: u64) {
-    loop {
+pub fn run_loop(poll_interval_ms: u64, running: Arc<AtomicBool>) {
+    // run until the running flag is cleared by a signal handler
+    while running.load(Ordering::SeqCst) {
         // load persisted state
         let path = crate::storage::default_path();
         if let Some(state) = crate::storage::load(Some(&path)) {
@@ -32,6 +33,23 @@ pub fn run_loop(poll_interval_ms: u64) {
         } else {
             render_pet_once(Mood::Neutral);
         }
-        std::thread::sleep(std::time::Duration::from_millis(poll_interval_ms));
+        // check again periodically
+        for _ in 0..(poll_interval_ms / 200).max(1) {
+            if !running.load(Ordering::SeqCst) {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(200));
+        }
+    }
+
+    // play a short exit animation
+    let exit_frames = [
+        "\n ∧＿∧\n ( ◡‿◡)    Bye\n /つ   ⊂\\\n しーーーJ\n",
+        "\n  ∧＿∧\n ( ；_；)    Bye\n /つ   ⊂\\\n しーーーJ\n",
+    ];
+    for frame in exit_frames.iter().cycle().take(4) {
+        print!("\x1B[2J\x1B[1;1H");
+        println!("{}", frame);
+        thread::sleep(Duration::from_millis(250));
     }
 }
