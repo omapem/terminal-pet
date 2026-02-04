@@ -558,6 +558,7 @@ dependencies = [
  "clap",
  "ctrlc",
  "dirs",
+ "libc",
  "predicates",
  "serde",
  "serde_json",
