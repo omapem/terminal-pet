@@ -17,14 +17,20 @@ pub struct PetState {
     pub level: u32,
 }
 
-impl PetState {
-    pub fn new() -> Self {
+impl Default for PetState {
+    fn default() -> Self {
         Self {
             mood: Mood::Neutral,
             energy: 50,
             xp: 0,
             level: 1,
         }
+    }
+}
+
+impl PetState {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn add_xp(&mut self, delta: u32) {
