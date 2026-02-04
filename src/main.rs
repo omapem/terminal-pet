@@ -54,7 +54,13 @@ fn main() {
             }
         }
         Some(Commands::Event { name }) => {
-            let mut pet = PetState::new();
+            // load persisted state if present, otherwise start fresh
+            let mut pet_state = if let Some(ps) = storage::load(None) {
+                PetState { mood: ps.mood, energy: ps.energy, xp: ps.xp, level: ps.level }
+            } else {
+                PetState::new()
+            };
+
             let event = match name.as_str() {
                 "commit" => Event::Commit,
                 "test-pass" => Event::TestPass,
@@ -70,8 +76,16 @@ fn main() {
                     std::process::exit(2);
                 }
             };
-            pet.apply_event(event);
-            println!("Applied event: {}\nNew state: {:?}", name, pet);
+
+            pet_state.apply_event(event);
+
+            // persist new state
+            let persisted = PersistedPet { mood: pet_state.mood, energy: pet_state.energy, xp: pet_state.xp, level: pet_state.level };
+            if let Err(e) = storage::save(None, &persisted) {
+                eprintln!("Failed to persist pet state: {}", e);
+            }
+
+            println!("Applied event: {}\nNew state: {:?}", name, pet_state);
         }
         None => {
             // default to status
