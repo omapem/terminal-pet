@@ -25,6 +25,13 @@ jobs:
       - name: Build
         run: cargo build --verbose
       - name: Run tests
-        run: cargo test --verbose
+        run: |
+          # Skip signal tests on non-Unix runners to avoid flakiness
+          if [ "$(uname -s)" != "Linux" ] && [ "$(uname -s)" != "Darwin" ]; then
+            echo "Non-Unix runner detected, running tests excluding signal tests";
+            cargo test --verbose -- --skip pet_exits_on_sigint
+          else
+            cargo test --verbose
+          fi
       - name: Run clippy
         run: cargo clippy -- -D warnings
