@@ -1,6 +1,6 @@
 //! Core pet engine for Milestone 1
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum Mood {
     Happy,
     Neutral,
@@ -9,7 +9,7 @@ pub enum Mood {
     Scared,
 }
 
-#[derive(Debug)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct PetState {
     pub mood: Mood,
     pub energy: i32,
