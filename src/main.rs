@@ -1,5 +1,6 @@
 use clap::{Parser, Subcommand};
-use terminal_pet::{Event, PetState};
+use terminal_pet::{Event, PetState, Mood};
+mod renderer;
 
 #[derive(Parser)]
 #[command(name = "terminal-pet")]
@@ -23,6 +24,7 @@ fn main() {
         Some(Commands::Status) => {
             let pet = PetState::new();
             println!("Pet status:\nMood: {:?}\nEnergy: {}\nXP: {}\nLevel: {}", pet.mood, pet.energy, pet.xp, pet.level);
+            renderer::render_pet(pet.mood);
         }
         Some(Commands::Event { name }) => {
             let mut pet = PetState::new();
