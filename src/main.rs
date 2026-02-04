@@ -17,6 +17,8 @@ struct Cli {
 enum Commands {
     /// Show pet status
     Status,
+    /// Run pet continuously, reading persisted state and rendering
+    Pet,
     /// Simulate event (for development/testing)
     Event { name: String },
     /// Install git hook (post-commit) in the current repo
@@ -33,7 +35,12 @@ fn main() {
             if let Some(ps) = persisted {
                 println!("Persisted: mood={:?} energy={} xp={} level={}", ps.mood, ps.energy, ps.xp, ps.level);
             }
-            renderer::render_pet(pet.mood);
+            renderer::render_pet_once(pet.mood);
+        }
+
+        Some(Commands::Pet) => {
+            println!("Starting pet mode (press Ctrl+C to quit). Reading state and rendering...");
+            renderer::run_loop(1000);
         }
 
         Some(Commands::HookInstall) => {
