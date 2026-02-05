@@ -1,8 +1,5 @@
-use assert_cmd::prelude::*;
-use predicates::prelude::*;
 use std::process::{Command, Stdio};
 use tempfile::tempdir;
-use std::fs;
 use std::time::Duration;
 
 #[test]
@@ -13,9 +10,11 @@ fn installs_hook_in_repo_and_triggers_event() {
     Command::new("git").arg("init").current_dir(&repo_dir).output().unwrap();
 
     // run our binary's hook-install
-    let mut cmd = Command::cargo_bin("terminal_pet").unwrap();
+    let exe = assert_cmd::cargo::cargo_bin!("terminal_pet");
+    let mut cmd = Command::new(exe);
     cmd.arg("hook-install").current_dir(&repo_dir);
-    cmd.assert().success();
+    let status = cmd.status().expect("failed to run hook-install");
+    assert!(status.success());
 
     // check hook exists
     let hook_path = repo_dir.join(".git/hooks/post-commit");
@@ -31,7 +30,8 @@ fn installs_hook_in_repo_and_triggers_event() {
 #[cfg(unix)]
 fn pet_exits_on_sigint() {
     // spawn the binary in pet mode
-    let mut child = Command::cargo_bin("terminal_pet").unwrap()
+    let exe = assert_cmd::cargo::cargo_bin!("terminal_pet");
+    let mut child = Command::new(exe)
         .arg("pet")
         .arg("--poll-interval")
         .arg("1")

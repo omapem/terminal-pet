@@ -107,8 +107,6 @@ pub mod storage;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use std::path::PathBuf;
     use crate::storage;
     #[test]
     fn commit_increases_xp_and_sets_happy() {
