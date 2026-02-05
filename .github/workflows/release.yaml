@@ -27,6 +27,25 @@ jobs:
           files: release/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute SHA256 checksum
+        id: checksum
+        run: |
+          FILE=$(ls release/*.tar.gz)
+          SHA=$(sha256sum "$FILE" | awk '{print $1}')
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
       - name: Create Homebrew tap PR
-        if: github.event_name == 'push'
-        run: echo "Skipping automated Homebrew tap PR creation in this workflow. Use separate action or manual process."
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "homebrew: update terminal-pet formula for ${{ github.ref_name }}"
+          title: "Update terminal-pet formula for ${{ github.ref_name }}"
+          body: "Automated update of Homebrew formula for ${{ github.ref_name }}"
+          base: main
+          branch: update/homebrew-${{ github.ref_name }}
+          file-pattern: "homebrew/terminal-pet.rb"
+          # Use sed to replace URL and sha in the formula
+          file-update-method: "replace"
+          additional-files: |
+            homebrew/terminal-pet.rb
+        env:
+          SHA256: ${{ steps.checksum.outputs.sha }}
