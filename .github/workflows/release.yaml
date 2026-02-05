@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - name: Install cargo-deb
+        run: cargo install cargo-deb --force
+      - name: Build and create deb
+        run: cargo deb --no-build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-pet-deb
+          path: target/debian/*.deb
