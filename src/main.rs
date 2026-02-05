@@ -23,9 +23,15 @@ enum Commands {
         #[arg(long, default_value_t = 5)]
         poll_interval: u64,
     },
+    /// Install the terminal-pet binary to a default location (or provide --dest)
+    Install {
+        /// Destination path for the installed binary
+        #[arg(long)]
+        dest: Option<std::path::PathBuf>,
+    },
     /// Simulate event (for development/testing)
     Event { name: String },
-    /// Install git hook (post-commit) in the current repo
+    /// Install git hooks (post-commit) in the current repo (writes Unix and Windows variants)
     HookInstall,
 }
 fn main() {
@@ -56,15 +62,66 @@ fn main() {
             renderer::run_loop(poll_ms, running);
         }
 
-        Some(Commands::HookInstall) => {
-            // write .git/hooks/post-commit
-            let hook_path = PathBuf::from(".git/hooks/post-commit");
-            let script = "#!/bin/sh\nterminal-pet event commit || true\n";
-            if let Some(parent) = hook_path.parent() {
+        Some(Commands::Install { dest }) => {
+            // determine destination: user-provided or default
+            let dest_path = if let Some(d) = dest {
+                d.clone()
+            } else {
+                let home = dirs::home_dir().expect("failed to find home dir");
+                if cfg!(windows) {
+                    home.join("AppData").join("Local").join("Programs").join("terminal-pet").join("terminal-pet.exe")
+                } else {
+                    home.join(".local").join("bin").join("terminal-pet")
+                }
+            };
+
+            // ensure parent dir exists
+            if let Some(parent) = dest_path.parent() {
                 let _ = std::fs::create_dir_all(parent);
             }
-            match std::fs::write(&hook_path, script) {
+
+            // try to locate current executable to copy
+            match std::env::current_exe() {
+                Ok(current) => {
+                    match std::fs::copy(&current, &dest_path) {
+                        Ok(_) => {
+                            #[cfg(unix)]
+                            let _ = std::fs::set_permissions(&dest_path, std::os::unix::fs::PermissionsExt::from_mode(0o755));
+                            println!("Installed terminal-pet to {}", dest_path.display());
+                        }
+                        Err(e) => eprintln!("Failed to install binary: {}", e),
+                    }
+                }
+                Err(e) => eprintln!("Failed to locate current executable: {}", e),
+            }
+        }
+
+        Some(Commands::HookInstall) => {
+            // write .git/hooks/post-commit (Unix) and post-commit.bat (Windows)
+            let repo_hook_dir = PathBuf::from(".git/hooks");
+            let _ = std::fs::create_dir_all(&repo_hook_dir);
+
+            // prefer an installed absolute path if present
+            let installed = {
+                let home = dirs::home_dir();
+                home.map(|h| {
+                    if cfg!(windows) {
+                        h.join("AppData").join("Local").join("Programs").join("terminal-pet").join("terminal-pet.exe")
+                    } else {
+                        h.join(".local").join("bin").join("terminal-pet")
+                    }
+                })
+            };
+
+            let unix_cmd = if let Some(ref p) = installed {
+                if p.exists() { format!("{} event commit || true\n", p.display()) } else { "terminal-pet event commit || true\n".to_string() }
+            } else { "terminal-pet event commit || true\n".to_string() };
+
+            let unix_script = format!("#!/bin/sh\n{}", unix_cmd);
+            let hook_path = repo_hook_dir.join("post-commit");
+            match std::fs::write(&hook_path, unix_script) {
                 Ok(()) => {
+                    #[cfg(unix)]
                     let _ = std::fs::set_permissions(&hook_path, std::os::unix::fs::PermissionsExt::from_mode(0o755));
                     println!("Installed post-commit hook at {}", hook_path.display());
                 }
@@ -72,6 +129,15 @@ fn main() {
                     eprintln!("Failed to install hook: {}", e);
                 }
             }
+
+            // Windows variant
+            let windows_cmd = if let Some(ref p) = installed {
+                if p.exists() { format!("\"{}\" event commit || exit /b 0\r\n", p.display()) } else { "terminal-pet.exe event commit || exit /b 0\r\n".to_string() }
+            } else { "terminal-pet.exe event commit || exit /b 0\r\n".to_string() };
+            let windows_script = format!("@echo off\r\n{}", windows_cmd);
+            let win_hook_path = repo_hook_dir.join("post-commit.bat");
+            let _ = std::fs::write(&win_hook_path, windows_script);
+            println!("Installed Windows post-commit hook at {}", win_hook_path.display());
         }
         Some(Commands::Event { name }) => {
             // load persisted state if present, otherwise start fresh
