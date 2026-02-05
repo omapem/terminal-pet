@@ -1,6 +1,16 @@
 use std::{thread, time::Duration, sync::{Arc, atomic::{AtomicBool, Ordering}}};
 use crate::{Mood};
 
+pub fn render_snapshot(mood: Mood) {
+    let frame = match mood {
+        Mood::Happy => "\n ∧＿∧\n ( ◕‿◕)    ♥\n /つ🍪⊂\\\n しーーーJ\n",
+        Mood::Sad => "\n ∧＿∧\n ( ；‿；)    ☁\n /つ   ⊂\\\n しーーーJ\n",
+        _ => "\n ∧＿∧\n ( ◕‿◕)\n /つ   ⊂\\\n しーーーJ\n",
+    };
+    print!("\x1B[2J\x1B[1;1H");
+    println!("{}", frame);
+}
+
 pub fn render_pet_once(mood: Mood) {
     let frames = match mood {
         Mood::Happy => vec![

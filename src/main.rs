@@ -44,8 +44,10 @@ fn main() {
             let persisted = storage::load(None);
             if let Some(ps) = persisted {
                 println!("Persisted: mood={:?} energy={} xp={} level={}", ps.mood, ps.energy, ps.xp, ps.level);
+                renderer::render_snapshot(ps.mood);
+            } else {
+                renderer::render_snapshot(pet.mood);
             }
-            renderer::render_pet_once(pet.mood);
         }
 
         Some(Commands::Pet { poll_interval }) => {
