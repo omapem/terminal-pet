@@ -5,12 +5,13 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+  packages: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up Rust
@@ -25,20 +26,30 @@ jobs:
           TAR_NAME=terminal-pet-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
           # binary name uses underscore in crate name
           tar -C target/release -czf release/${TAR_NAME} terminal_pet
-      - name: Upload release asset
-        uses: softprops/action-gh-release@v1
+      - name: Create GitHub release
+        id: create_release
+        uses: actions/create-release@v1
         with:
-          files: release/*.tar.gz
+          tag_name: ${{ github.ref_name }}
+          release_name: ${{ github.ref_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # ensure workflow has permission to create releases
-        permissions: write-all
+
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: release/*.tar.gz
+          asset_name: "${{ github.ref_name }}.tar.gz"
+          asset_content_type: application/gzip
+
       - name: Compute SHA256 checksum
         id: checksum
         run: |
           FILE=$(ls release/*.tar.gz)
           SHA=$(sha256sum "$FILE" | awk '{print $1}')
           echo "sha=$SHA" >> $GITHUB_OUTPUT
+
       - name: Create Homebrew tap PR
         uses: peter-evans/create-pull-request@v5
         with:
