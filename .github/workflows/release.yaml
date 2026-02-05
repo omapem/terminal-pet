@@ -20,7 +20,8 @@ jobs:
         run: |
           mkdir -p release
           TAR_NAME=terminal-pet-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
-          tar -C target/release -czf release/${TAR_NAME} terminal-pet
+          # binary name uses underscore in crate name
+          tar -C target/release -czf release/${TAR_NAME} terminal_pet
       - name: Upload release asset
         uses: softprops/action-gh-release@v1
         with:
