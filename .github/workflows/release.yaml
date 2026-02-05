@@ -36,12 +36,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload release asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: release/*.tar.gz
-          asset_name: "${{ github.ref_name }}.tar.gz"
-          asset_content_type: application/gzip
+        run: |
+          FILE=$(ls release/*.tar.gz | head -n1)
+          if [ -z "$FILE" ]; then echo "No release artifact found"; exit 1; fi
+          echo "Uploading $FILE to release"
+          gh release upload "${{ github.ref_name }}" "$FILE" --repo "${{ github.repository }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compute SHA256 checksum
         id: checksum
