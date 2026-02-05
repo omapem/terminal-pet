@@ -14,12 +14,19 @@ jobs:
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
-      - name: Install cargo-deb
-        run: cargo install cargo-deb --force
-      - name: Build and create deb
-        run: cargo deb --no-build
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Build release
+        run: cargo build --release
+      - name: Create tar.gz
+        run: |
+          mkdir -p release
+          TAR_NAME=terminal-pet-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
+          tar -C target/release -czf release/${TAR_NAME} terminal-pet
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v1
         with:
-          name: terminal-pet-deb
-          path: target/debian/*.deb
+          files: release/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Homebrew tap PR
+        if: github.event_name == 'push'
+        run: echo "Skipping automated Homebrew tap PR creation in this workflow. Use separate action or manual process."
